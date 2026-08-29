@@ -72,6 +72,8 @@ public:
 		this->fps_limit = camera.fps_limit;
 		std::swap(bitmap, camera.bitmap);
 		std::swap(zbuffer, camera.zbuffer);
+		std::swap(allocated_bitmap, camera.allocated_bitmap);
+		std::swap(allocated_zbuffer, camera.allocated_zbuffer);
 		set_zoom(1.0f); // set initial zoom
 		update_matrix();
 		return *this;
