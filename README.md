@@ -258,6 +258,18 @@ The fastest and most memory efficient lattice Boltzmann CFD software, running on
   - reduced assembly spaghettification by simpler condition for VR rendering and disabling loop unrolling in rasterization
   - micro-optimization in `convert_triangle/_interpolated()`
   - fixed empty kernel name and workgroup size error printout in OpenCL-Wrapper
+- [v3.8](https://github.com/ProjectPhysX/FluidX3D/releases/tag/v3.8) (05.09.2026) [changes](https://github.com/ProjectPhysX/FluidX3D/compare/v3.7...v3.8) (faster rendering & fixes)
+  - dispatch marching-cubes kernels only for `(Nx-1)*(Ny-1)*(Nz-1)` instead of `N`
+  - made `graphics_flags_mc()` kernel up to 40% faster with local memory optimization
+  - added local memory optimization also for `graphics_rasterize_phi()` kernel, small optimization in `marching_cubes()`
+  - updated driver install instructions
+  - fixed `graphics_q()` kernel with `GRAPHICS_LSQ=8` on older Nvidia GPUs through register optimization
+  - fixed z-buffer flickering on Intel Panther Lake iGPUs
+  - disabled zero-copy on Nvidia iGPUs such as GB10 because `CL_MEM_USE_HOST_PTR` is broken there
+  - fixed missing `allocated_bitmap/zbuffer` in `Camera` move assignment
+  - fixed missing type cast in OpenCL-Wrapper
+  - fixed crash/segfault on exit
+  - removed `opencl_unroll_hint` again (unsupported on some older GPUs)
 
 </details>
 
