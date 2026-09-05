@@ -402,59 +402,57 @@ string opencl_c_container() { return R( // ########################## begin of O
 )+R(float interpolate(const float v1, const float v2, const float iso) { // linearly interpolate position where isosurface cuts an edge between 2 vertices at 0 and 1
 	return (iso-v1)/(v2-v1);
 }
-)+R(uint marching_cubes(const float* v, const float iso, float3* triangles) { // input: 8 values v, isovalue; output: returns number of triangles, 15 triangle vertices t
+)+R(uint marching_cubes(const float* v, const float iso, float3* triangle_vertices, uchar* vertex_indices) { // input: 8 values v, isovalue; output: returns number of triangles, 12 triangle_vertices, 15 vertex_indices
 	uint cube = 0u; // determine index of which vertices are inside of the isosurface
 	for(uint i=0u; i<8u; i++) cube |= (v[i]<iso)<<i;
 	if(cube==0u||cube==255u) return 0u; // cube is entirely inside/outside of the isosurface
-	float3 vertex[12]; // find the vertices where the surface intersects the cube
-	vertex[ 0] = (float3)(interpolate(v[0], v[1], iso), 0.0f, 0.0f); // interpolate vertices on all 12 edges
-	vertex[ 1] = (float3)(1.0f, 0.0f, interpolate(v[1], v[2], iso)); // do interpolation only in 1D to reduce operations
-	vertex[ 2] = (float3)(interpolate(v[3], v[2], iso), 0.0f, 1.0f);
-	vertex[ 3] = (float3)(0.0f, 0.0f, interpolate(v[0], v[3], iso));
-	vertex[ 4] = (float3)(interpolate(v[4], v[5], iso), 1.0f, 0.0f);
-	vertex[ 5] = (float3)(1.0f, 1.0f, interpolate(v[5], v[6], iso));
-	vertex[ 6] = (float3)(interpolate(v[7], v[6], iso), 1.0f, 1.0f);
-	vertex[ 7] = (float3)(0.0f, 1.0f, interpolate(v[4], v[7], iso));
-	vertex[ 8] = (float3)(0.0f, interpolate(v[0], v[4], iso), 0.0f);
-	vertex[ 9] = (float3)(1.0f, interpolate(v[1], v[5], iso), 0.0f);
-	vertex[10] = (float3)(1.0f, interpolate(v[2], v[6], iso), 1.0f);
-	vertex[11] = (float3)(0.0f, interpolate(v[3], v[7], iso), 1.0f);
+	triangle_vertices[ 0] = (float3)(interpolate(v[0], v[1], iso), 0.0f, 0.0f); // find the vertices where the surface intersects the cube
+	triangle_vertices[ 1] = (float3)(1.0f, 0.0f, interpolate(v[1], v[2], iso)); // interpolate vertices on all 12 edges
+	triangle_vertices[ 2] = (float3)(interpolate(v[3], v[2], iso), 0.0f, 1.0f); // do interpolation only in 1D to reduce operations
+	triangle_vertices[ 3] = (float3)(0.0f, 0.0f, interpolate(v[0], v[3], iso));
+	triangle_vertices[ 4] = (float3)(interpolate(v[4], v[5], iso), 1.0f, 0.0f);
+	triangle_vertices[ 5] = (float3)(1.0f, 1.0f, interpolate(v[5], v[6], iso));
+	triangle_vertices[ 6] = (float3)(interpolate(v[7], v[6], iso), 1.0f, 1.0f);
+	triangle_vertices[ 7] = (float3)(0.0f, 1.0f, interpolate(v[4], v[7], iso));
+	triangle_vertices[ 8] = (float3)(0.0f, interpolate(v[0], v[4], iso), 0.0f);
+	triangle_vertices[ 9] = (float3)(1.0f, interpolate(v[1], v[5], iso), 0.0f);
+	triangle_vertices[10] = (float3)(1.0f, interpolate(v[2], v[6], iso), 1.0f);
+	triangle_vertices[11] = (float3)(0.0f, interpolate(v[3], v[7], iso), 1.0f);
 	cube *= 15u;
 	uint i; // number of triangle vertices
 	for(i=0u; i<15u; i+=3u) { // create the triangles
 		const uchar triangle_table_cube_i_0u_ = triangle_table(cube+i);
 		if(triangle_table_cube_i_0u_==15u) break;
-		triangles[i   ] = vertex[triangle_table_cube_i_0u_];
-		triangles[i+1u] = vertex[triangle_table(cube+i+1u)];
-		triangles[i+2u] = vertex[triangle_table(cube+i+2u)];
+		vertex_indices[i   ] = triangle_table_cube_i_0u_;
+		vertex_indices[i+1u] = triangle_table(cube+i+1u);
+		vertex_indices[i+2u] = triangle_table(cube+i+2u);
 	}
 	return i/3u; // return number of triangles
 }
-)+R(uint marching_cubes_halfway(const bool* v, float3* triangles) { // input: 8 bool values v; output: returns number of triangles, 15 triangle vertices t
+)+R(uint marching_cubes_halfway(const bool* v, float3* triangle_vertices, uchar* vertex_indices) { // input: 8 values v; output: returns number of triangles, 12 triangle_vertices, 15 vertex_indices
 	uint cube = 0u; // determine index of which vertices are inside of the isosurface
 	for(uint i=0u; i<8u; i++) cube |= (uint)(!v[i])<<i;
 	if(cube==0u||cube==255u) return 0u; // cube is entirely inside/outside of the isosurface
-	float3 vertex[12]; // find the vertices where the surface intersects the cube
-	vertex[ 0] = (float3)(0.5f, 0.0f, 0.0f); // vertices on all 12 edges
-	vertex[ 1] = (float3)(1.0f, 0.0f, 0.5f);
-	vertex[ 2] = (float3)(0.5f, 0.0f, 1.0f);
-	vertex[ 3] = (float3)(0.0f, 0.0f, 0.5f);
-	vertex[ 4] = (float3)(0.5f, 1.0f, 0.0f);
-	vertex[ 5] = (float3)(1.0f, 1.0f, 0.5f);
-	vertex[ 6] = (float3)(0.5f, 1.0f, 1.0f);
-	vertex[ 7] = (float3)(0.0f, 1.0f, 0.5f);
-	vertex[ 8] = (float3)(0.0f, 0.5f, 0.0f);
-	vertex[ 9] = (float3)(1.0f, 0.5f, 0.0f);
-	vertex[10] = (float3)(1.0f, 0.5f, 1.0f);
-	vertex[11] = (float3)(0.0f, 0.5f, 1.0f);
+	triangle_vertices[ 0] = (float3)(0.5f, 0.0f, 0.0f); // find the vertices where the surface intersects the cube
+	triangle_vertices[ 1] = (float3)(1.0f, 0.0f, 0.5f); // vertices on all 12 edges
+	triangle_vertices[ 2] = (float3)(0.5f, 0.0f, 1.0f); // skip interpolation entirely
+	triangle_vertices[ 3] = (float3)(0.0f, 0.0f, 0.5f);
+	triangle_vertices[ 4] = (float3)(0.5f, 1.0f, 0.0f);
+	triangle_vertices[ 5] = (float3)(1.0f, 1.0f, 0.5f);
+	triangle_vertices[ 6] = (float3)(0.5f, 1.0f, 1.0f);
+	triangle_vertices[ 7] = (float3)(0.0f, 1.0f, 0.5f);
+	triangle_vertices[ 8] = (float3)(0.0f, 0.5f, 0.0f);
+	triangle_vertices[ 9] = (float3)(1.0f, 0.5f, 0.0f);
+	triangle_vertices[10] = (float3)(1.0f, 0.5f, 1.0f);
+	triangle_vertices[11] = (float3)(0.0f, 0.5f, 1.0f);
 	cube *= 15u;
 	uint i; // number of triangle vertices
 	for(i=0u; i<15u; i+=3u) { // create the triangles
 		const uchar triangle_table_cube_i_0u_ = triangle_table(cube+i);
 		if(triangle_table_cube_i_0u_==15u) break;
-		triangles[i   ] = vertex[triangle_table_cube_i_0u_];
-		triangles[i+1u] = vertex[triangle_table(cube+i+1u)];
-		triangles[i+2u] = vertex[triangle_table(cube+i+2u)];
+		vertex_indices[i   ] = triangle_table_cube_i_0u_;
+		vertex_indices[i+1u] = triangle_table(cube+i+1u);
+		vertex_indices[i+2u] = triangle_table(cube+i+2u);
 	}
 	return i/3u; // return number of triangles
 }
@@ -695,14 +693,15 @@ string opencl_c_container() { return R( // ########################## begin of O
 		if(!(flags_cell&(TYPE_S|TYPE_E|TYPE_I))) continue; // cell is entirely inside/outside of the isosurface
 		float v[8];
 		for(uint i=0u; i<8u; i++) v[i] = phi[j[i]];
-		float3 triangles[15]; // maximum of 5 triangles with 3 vertices each
-		const uint tn = marching_cubes(v, 0.5f, triangles); // run marching cubes algorithm
-		if(tn==0u) continue; // if returned tn value is non-zero, iterate through triangles
+		float3 triangle_vertices[12]; // 12 triangle vertices for marching_cubes (return 12 vertices instead of 15 triangles to save register space)
+		uchar vertex_indices[15]; // maximum of 5 triangles with 3 vertices each
+		const uint tn = marching_cubes(v, 0.5f, triangle_vertices, vertex_indices); // run marching cubes algorithm
+		if(tn==0u) continue; // attention: continue here, not return!
 		const float3 offset = (float3)((float)xyz.x+0.5f-0.5f*(float)Nx, (float)xyz.y+0.5f-0.5f*(float)Ny, (float)xyz.z+0.5f-0.5f*(float)Nz);
 		for(uint i=0u; i<tn; i++) {
-			const float3 p0 = triangles[3u*i   ]+offset;
-			const float3 p1 = triangles[3u*i+1u]+offset;
-			const float3 p2 = triangles[3u*i+2u]+offset;
+			const float3 p0 = triangle_vertices[vertex_indices[3u*i   ]]+offset; // triangle coordinates in [0,1] (local cell)
+			const float3 p1 = triangle_vertices[vertex_indices[3u*i+1u]]+offset;
+			const float3 p2 = triangle_vertices[vertex_indices[3u*i+2u]]+offset;
 			const float intersect = intersect_triangle_bidirectional(r, p0, p1, p2); // for each triangle, check ray-triangle intersection
 			if(intersect>0.0f) { // intersection found (there can only be exactly 1 intersection)
 				const uxx xq = (uxx) (((uint)xyz.x   +2u)%Nx); // central difference stencil on each cube corner point
@@ -2586,13 +2585,14 @@ string opencl_c_container() { return R( // ########################## begin of O
 	for(uint i=0u; i<8u; i++) Fj[i] = (v[i] ? load3(F, j[i]) : (float3)(0.0f, 0.0f, 0.0f));
 )+"#endif"+R( // FORCE_FIELD
 )+"#endif"+R( // do not use local memory
-	float3 triangles[15]; // maximum of 5 triangles with 3 vertices each
-	const uint tn = marching_cubes_halfway(v, triangles); // run marching cubes algorithm
+	float3 triangle_vertices[12]; // 12 triangle vertices for marching_cubes (return 12 vertices instead of 15 triangles to save register space)
+	uchar vertex_indices[15]; // maximum of 5 triangles with 3 vertices each
+	const uint tn = marching_cubes_halfway(v, triangle_vertices, vertex_indices); // run marching cubes algorithm
 	if(tn==0u) return;
 	for(uint i=0u; i<tn; i++) {
-		const float3 p0 = triangles[3u*i   ];
-		const float3 p1 = triangles[3u*i+1u];
-		const float3 p2 = triangles[3u*i+2u];
+		const float3 p0 = triangle_vertices[vertex_indices[3u*i   ]]; // triangle coordinates in [0,1] (local cell)
+		const float3 p1 = triangle_vertices[vertex_indices[3u*i+1u]];
+		const float3 p2 = triangle_vertices[vertex_indices[3u*i+2u]];
 		int c0=0xDFDFDF, c1=0xDFDFDF, c2=0xDFDFDF;
 )+"#ifdef FORCE_FIELD"+R(
 		const float3 normal = normalize(cross(p1-p0, p2-p0));
@@ -2928,7 +2928,8 @@ string opencl_c_container() { return R( // ########################## begin of O
 	float camera_cache[15]; // cache camera parameters in case the kernel draws more than one shape
 	for(uint i=0u; i<15u; i++) camera_cache[i] = camera[i];
 	if(!is_in_camera_frustum(p, camera_cache)) return; // skip loading LBM data if grid cell is not visible
-	float3 uj[32];
+	float3 uj[ 8];
+	float3 uk[24];
 )+"#if LSQ>0u"+R( // use local memory
 	{ // load 32-cell stencil from cache
 		const uint xm=xyz_local.x                    , x0=xm+               1u  , xp=xm+ 2u                   , xq=xm+ 3u                   ;
@@ -2942,37 +2943,38 @@ string opencl_c_container() { return R( // ########################## begin of O
 		uj[ 5] = u_cache[xp+yp+z0]; // ++0
 		uj[ 6] = u_cache[xp+yp+zp]; // +++
 		uj[ 7] = u_cache[x0+yp+zp]; // 0++
-		uj[ 8] = u_cache[xm+y0+z0]; // -00 // central difference stencil on each cube corner point
-		uj[ 9] = u_cache[x0+ym+z0]; // 0-0
-		uj[10] = u_cache[x0+y0+zm]; // 00-
-		uj[11] = u_cache[xq+y0+z0]; // #00
-		uj[12] = u_cache[xp+ym+z0]; // +-0
-		uj[13] = u_cache[xp+y0+zm]; // +0-
-		uj[14] = u_cache[xq+y0+zp]; // #0+
-		uj[15] = u_cache[xp+ym+zp]; // +-+
-		uj[16] = u_cache[xp+y0+zq]; // +0#
-		uj[17] = u_cache[xm+y0+zp]; // -0+
-		uj[18] = u_cache[x0+ym+zp]; // 0-+
-		uj[19] = u_cache[x0+y0+zq]; // 00#
-		uj[20] = u_cache[xm+yp+z0]; // -+0
-		uj[21] = u_cache[x0+yq+z0]; // 0#0
-		uj[22] = u_cache[x0+yp+zm]; // 0+-
-		uj[23] = u_cache[xq+yp+z0]; // #+0
-		uj[24] = u_cache[xp+yq+z0]; // +#0
-		uj[25] = u_cache[xp+yp+zm]; // ++-
-		uj[26] = u_cache[xq+yp+zp]; // #++
-		uj[27] = u_cache[xp+yq+zp]; // +#+
-		uj[28] = u_cache[xp+yp+zq]; // ++#
-		uj[29] = u_cache[xm+yp+zp]; // -++
-		uj[30] = u_cache[x0+yq+zp]; // 0#+
-		uj[31] = u_cache[x0+yp+zq]; // 0+#
+		uk[ 0] = u_cache[xm+y0+z0]; // -00 // central difference stencil on each cube corner point
+		uk[ 1] = u_cache[x0+ym+z0]; // 0-0
+		uk[ 2] = u_cache[x0+y0+zm]; // 00-
+		uk[ 3] = u_cache[xq+y0+z0]; // #00
+		uk[ 4] = u_cache[xp+ym+z0]; // +-0
+		uk[ 5] = u_cache[xp+y0+zm]; // +0-
+		uk[ 6] = u_cache[xq+y0+zp]; // #0+
+		uk[ 7] = u_cache[xp+ym+zp]; // +-+
+		uk[ 8] = u_cache[xp+y0+zq]; // +0#
+		uk[ 9] = u_cache[xm+y0+zp]; // -0+
+		uk[10] = u_cache[x0+ym+zp]; // 0-+
+		uk[11] = u_cache[x0+y0+zq]; // 00#
+		uk[12] = u_cache[xm+yp+z0]; // -+0
+		uk[13] = u_cache[x0+yq+z0]; // 0#0
+		uk[14] = u_cache[x0+yp+zm]; // 0+-
+		uk[15] = u_cache[xq+yp+z0]; // #+0
+		uk[16] = u_cache[xp+yq+z0]; // +#0
+		uk[17] = u_cache[xp+yp+zm]; // ++-
+		uk[18] = u_cache[xq+yp+zp]; // #++
+		uk[19] = u_cache[xp+yq+zp]; // +#+
+		uk[20] = u_cache[xp+yp+zq]; // ++#
+		uk[21] = u_cache[xm+yp+zp]; // -++
+		uk[22] = u_cache[x0+yq+zp]; // 0#+
+		uk[23] = u_cache[x0+yp+zq]; // 0+#
 	}
 	uint j[8];
 	calculate_j8(xyz, j);
 )+"#else"+R( // do not use local memory
 	uxx j[32];
 	calculate_j32(xyz, j);
-	for(uint i=0u; i<32u; i++) uj[i] = load3(u, j[i]);
+	for(uint i=0u; i< 8u; i++) uj[i   ] = load3(u, j[i]);
+	for(uint i=8u; i<32u; i++) uk[i-8u] = load3(u, j[i]);
 )+"#endif"+R( // do not use local memory
 )+"#ifdef SURFACE"+R(
 	uchar flags_cell = 0u;
@@ -2980,41 +2982,53 @@ string opencl_c_container() { return R( // ########################## begin of O
 	if(flags_cell&(TYPE_I|TYPE_G)) return;
 )+"#endif"+R( // SURFACE
 	float v[8]; // don't load any velocity twice from global memory
-	v[0] = calculate_Q_cached(uj[ 1], uj[ 8], uj[ 4], uj[ 9], uj[ 3], uj[10]);
-	v[1] = calculate_Q_cached(uj[11], uj[ 0], uj[ 5], uj[12], uj[ 2], uj[13]);
-	v[2] = calculate_Q_cached(uj[14], uj[ 3], uj[ 6], uj[15], uj[16], uj[ 1]);
-	v[3] = calculate_Q_cached(uj[ 2], uj[17], uj[ 7], uj[18], uj[19], uj[ 0]);
-	v[4] = calculate_Q_cached(uj[ 5], uj[20], uj[21], uj[ 0], uj[ 7], uj[22]);
-	v[5] = calculate_Q_cached(uj[23], uj[ 4], uj[24], uj[ 1], uj[ 6], uj[25]);
-	v[6] = calculate_Q_cached(uj[26], uj[ 7], uj[27], uj[ 2], uj[28], uj[ 5]);
-	v[7] = calculate_Q_cached(uj[ 6], uj[29], uj[30], uj[ 3], uj[31], uj[ 4]);
-	float3 triangles[15]; // maximum of 5 triangles with 3 vertices each
-	const uint tn = marching_cubes(v, def_scale_Q_min, triangles); // run marching cubes algorithm
+	v[0] = calculate_Q_cached(uj[ 1], uk[ 0], uj[ 4], uk[ 1], uj[ 3], uk[ 2]);
+	v[1] = calculate_Q_cached(uk[ 3], uj[ 0], uj[ 5], uk[ 4], uj[ 2], uk[ 5]);
+	v[2] = calculate_Q_cached(uk[ 6], uj[ 3], uj[ 6], uk[ 7], uk[ 8], uj[ 1]);
+	v[3] = calculate_Q_cached(uj[ 2], uk[ 9], uj[ 7], uk[10], uk[11], uj[ 0]);
+	v[4] = calculate_Q_cached(uj[ 5], uk[12], uk[13], uj[ 0], uj[ 7], uk[14]);
+	v[5] = calculate_Q_cached(uk[15], uj[ 4], uk[16], uj[ 1], uj[ 6], uk[17]);
+	v[6] = calculate_Q_cached(uk[18], uj[ 7], uk[19], uj[ 2], uk[20], uj[ 5]);
+	v[7] = calculate_Q_cached(uj[ 6], uk[21], uk[22], uj[ 3], uk[23], uj[ 4]);
+	float3 triangle_vertices[12]; // 12 triangle vertices for marching_cubes (return 12 vertices instead of 15 triangles to save register space)
+	uchar vertex_indices[15]; // maximum of 5 triangles with 3 vertices each
+	const uint tn = marching_cubes(v, def_scale_Q_min, triangle_vertices, vertex_indices); // run marching cubes algorithm
 	if(tn==0u) return;
+	switch(field_mode) {
+		case 1: // coloring by density
+			for(uint i=0u; i<8u; i++) uj[i].x = rho[j[i]]; // reuse uj.x instead of v, to save register space
+			break;
+)+"#ifdef TEMPERATURE"+R(
+		case 2: // coloring by temperature
+			for(uint i=0u; i<8u; i++) uj[i].x = T[j[i]]; // reuse uj.x instead of v, to save register space
+			break;
+)+"#endif"+R( // TEMPERATURE
+	}
 	for(uint i=0u; i<tn; i++) {
-		const float3 p0 = triangles[3u*i   ]; // triangle coordinates in [0,1] (local cell)
-		const float3 p1 = triangles[3u*i+1u];
-		const float3 p2 = triangles[3u*i+2u];
+		const float3 p0 = triangle_vertices[vertex_indices[3u*i   ]]; // triangle coordinates in [0,1] (local cell)
+		const float3 p1 = triangle_vertices[vertex_indices[3u*i+1u]];
+		const float3 p2 = triangle_vertices[vertex_indices[3u*i+2u]];
+		const float3 v0 = trilinear3(p0, uj);
+		const float3 v1 = trilinear3(p1, uj);
+		const float3 v2 = trilinear3(p2, uj);
 		const float3 normal = cross(p1-p0, p2-p0); // no normalize needed for shading()
 		int c0=0, c1=0, c2=0;
 		switch(field_mode) {
 			case 0: // coloring by velocity
-				c0 = shading(colorscale_rainbow(def_scale_u*length(trilinear3(p0, uj))), p+p0, normal, camera_cache);
-				c1 = shading(colorscale_rainbow(def_scale_u*length(trilinear3(p1, uj))), p+p1, normal, camera_cache);
-				c2 = shading(colorscale_rainbow(def_scale_u*length(trilinear3(p2, uj))), p+p2, normal, camera_cache);
+				c0 = shading(colorscale_rainbow(def_scale_u*length(v0)), p+p0, normal, camera_cache);
+				c1 = shading(colorscale_rainbow(def_scale_u*length(v1)), p+p1, normal, camera_cache);
+				c2 = shading(colorscale_rainbow(def_scale_u*length(v2)), p+p2, normal, camera_cache);
 				break;
 			case 1: // coloring by density
-				for(uint i=0u; i<8u; i++) v[i] = rho[j[i]];
-				c0 = shading(colorscale_twocolor(0.5f+def_scale_rho*(trilinear(p0, v)-1.0f)), p+p0, normal, camera_cache);
-				c1 = shading(colorscale_twocolor(0.5f+def_scale_rho*(trilinear(p1, v)-1.0f)), p+p1, normal, camera_cache);
-				c2 = shading(colorscale_twocolor(0.5f+def_scale_rho*(trilinear(p2, v)-1.0f)), p+p2, normal, camera_cache);
+				c0 = shading(colorscale_twocolor(0.5f+def_scale_rho*(v0.x-1.0f)), p+p0, normal, camera_cache);
+				c1 = shading(colorscale_twocolor(0.5f+def_scale_rho*(v1.x-1.0f)), p+p1, normal, camera_cache);
+				c2 = shading(colorscale_twocolor(0.5f+def_scale_rho*(v2.x-1.0f)), p+p2, normal, camera_cache);
 				break;
 )+"#ifdef TEMPERATURE"+R(
 			case 2: // coloring by temperature
-				for(uint i=0u; i<8u; i++) v[i] = T[j[i]];
-				c0 = shading(colorscale_iron(0.5f+def_scale_T*(trilinear(p0, v)-def_T_avg)), p+p0, normal, camera_cache);
-				c1 = shading(colorscale_iron(0.5f+def_scale_T*(trilinear(p1, v)-def_T_avg)), p+p1, normal, camera_cache);
-				c2 = shading(colorscale_iron(0.5f+def_scale_T*(trilinear(p2, v)-def_T_avg)), p+p2, normal, camera_cache);
+				c0 = shading(colorscale_iron(0.5f+def_scale_T*(v0.x-def_T_avg)), p+p0, normal, camera_cache);
+				c1 = shading(colorscale_iron(0.5f+def_scale_T*(v1.x-def_T_avg)), p+p1, normal, camera_cache);
+				c2 = shading(colorscale_iron(0.5f+def_scale_T*(v2.x-def_T_avg)), p+p2, normal, camera_cache);
 				break;
 )+"#endif"+R( // TEMPERATURE
 		}
@@ -3075,13 +3089,14 @@ string opencl_c_container() { return R( // ########################## begin of O
 	calculate_j8(xyz, j);
 	for(uint i=0u; i<8u; i++) v[i] = phi[j[i]];
 )+"#endif"+R( // do not use local memory
-	float3 triangles[15]; // maximum of 5 triangles with 3 vertices each
-	const uint tn = marching_cubes(v, 0.51f, triangles); // run marching cubes algorithm, isovalue slightly larger than 0.5f to fix z-fighting with graphics_flags_mc()
+	float3 triangle_vertices[12]; // 12 triangle vertices for marching_cubes (return 12 vertices instead of 15 triangles to save register space)
+	uchar vertex_indices[15]; // maximum of 5 triangles with 3 vertices each
+	const uint tn = marching_cubes(v, 0.51f, triangle_vertices, vertex_indices); // run marching cubes algorithm, isovalue slightly larger than 0.5f to fix z-fighting with graphics_flags_mc()
 	if(tn==0u) return;
 	for(uint i=0u; i<tn; i++) {
-		const float3 p0 = triangles[3u*i   ];
-		const float3 p1 = triangles[3u*i+1u];
-		const float3 p2 = triangles[3u*i+2u];
+		const float3 p0 = triangle_vertices[vertex_indices[3u*i   ]]; // triangle coordinates in [0,1] (local cell)
+		const float3 p1 = triangle_vertices[vertex_indices[3u*i+1u]];
+		const float3 p2 = triangle_vertices[vertex_indices[3u*i+2u]];
 		const float3 normal = cross(p1-p0, p2-p0); // no normalize needed for shading()
 		const int c0 = shading(0x379BFF, p+p0, normal, camera_cache);
 		const int c1 = shading(0x379BFF, p+p1, normal, camera_cache);
